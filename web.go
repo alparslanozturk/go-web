@@ -5,39 +5,38 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
-	_ "github.com/lib/pg"
+	_ "github.com/lib/pq"
 )
 
-var DB_DSN = os.Getenv("DB_DSN")
+func rootContext(w http.ResponseWriter, req *http.Request) {
 
-const (
-	DSN = "postgres://postgres:parola@localhost:5432/postgres "
-	SQL = "select pg_is_in_recovery()"
-)
+	var pg_is_in_recovery string
 
-func kokDizin(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "Merhaba \n")
-}
-func pgCheck(w http.ResponseWriter, req *http.Request){
-	
-	db, err := sql.Open("postgres", DSN)
-	if err != nil { panic(err) }
+	db, _ := sql.Open("postgres", "postgres://postgres:parola@localhost:5432/postgres?sslmode=disable")
 
-	rows, err := db.Query(SQL)
-	if err != nil { panic(err) }
-
-	for rows.Next(){
-		switch err := rows.Scan(&)
+	err := db.QueryRow("select pg_is_in_recovery()").Scan(&pg_is_in_recovery)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Down(Query Error)\n")
+		return
 	}
 
-
+	switch pg_is_in_recovery {
+	case "false":
+		fmt.Fprintf(w, "Primary\n")
+	case "true":
+		fmt.Fprintf(w, "Standby\n")
+	default:
+		fmt.Fprintf(w, "Down\n")
+	}
 }
 
-
-
 func main() {
-	http.HandleFunc("/", kokDizin)
-	http.ListenAndServe(":7777", nil)
+	http.HandleFunc("/", rootContext)
+
+	err := http.ListenAndServe(":7777", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
