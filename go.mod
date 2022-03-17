@@ -1,4 +1,4 @@
-module github.com/alparslanozturk/go-web
+module github.com/alparslanozturk/pgcheck
 
 go 1.17
 
